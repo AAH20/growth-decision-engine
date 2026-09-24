@@ -1,8 +1,8 @@
-# Growth Decision Engine
+# Marketing Analytics & Incrementality Testing — Growth Decision Engine
 
-**Open-source experiment-to-profit scorecards for product and marketing decisions.** The first release takes customer-controlled CSV exports of assignment, accepted outcomes, and unit costs. It reconciles every randomized unit, calculates contribution profit, estimates treatment-minus-control effects, and emits a deterministic scorecard that can be verified offline. The bundled data is entirely synthetic.
+**Open-source marketing analytics for the business value of product and campaign experiments.** The current release takes customer-controlled CSV exports of assignment, accepted outcomes, and unit costs. It reconciles every randomized unit, calculates contribution profit, estimates treatment-minus-control effects, applies a declared experiment plan, and emits a deterministic scorecard with daily BI rows that can be verified offline. The bundled data is entirely synthetic.
 
-This is a local measurement kernel, **not** a deployed marketing platform, a live PostHog/Cloudflare/Vercel connector, an autonomous campaign agent, or proof that a real experiment increased profit.
+This is a local measurement kernel with a read-only evidence contract for external analyst agents. It is **not** a deployed marketing platform, a live PostHog/Cloudflare/Vercel connector, an LLM-powered agent, an autonomous campaign agent, or proof that a real experiment increased profit.
 
 ## Try it in one command
 
@@ -14,6 +14,7 @@ python3 -m growth_decision_engine verify \
   --assignments growth_decision_engine/fixtures/assignments.synthetic.csv \
   --outcomes growth_decision_engine/fixtures/outcomes.synthetic.csv \
   --costs growth_decision_engine/fixtures/costs.synthetic.csv \
+  --plan growth_decision_engine/fixtures/plan.synthetic.json \
   --scorecard outputs/demo-scorecard.json
 python3 -m unittest discover -s tests -v
 ```
@@ -23,10 +24,16 @@ Use your own **permitted, de-identified** exports with `score`:
 ```bash
 python3 -m growth_decision_engine score \
   --assignments assignments.csv --outcomes outcomes.csv --costs costs.csv \
+  --plan plan.json \
   --output outputs/my-scorecard.json
+
+python3 -m growth_decision_engine bi-diff \
+  outputs/previous-scorecard.json outputs/my-scorecard.json
 ```
 
-`verify` recomputes the entire scorecard from the supplied files. It catches changed files, altered calculations, and altered report values; it does **not** authenticate source systems or prove that treatment assignment preceded the outcome. No file is uploaded and no account is modified.
+`verify` recomputes the entire scorecard from the supplied files and plan. `bi-diff` identifies changed source hashes and added, removed, or restated date/arm BI rows between snapshots. These commands do **not** authenticate source systems, prove that treatment assignment preceded outcomes, or prove that a plan was truly pre-registered. No file is uploaded and no account is modified.
+
+External analyst agents can submit a proposal JSON to `python3 -m growth_decision_engine proposal-check --scorecard outputs/demo-scorecard.json --proposal proposal.json`. The validator pins the exact report hash, resolves cited metric paths, and permits only review-oriented next steps. It checks **structural grounding**, not whether the natural-language finding is statistically sound. See [the proposal contract](docs/agent-proposals.md).
 
 ## Data contract
 
@@ -35,10 +42,11 @@ The three CSVs use one row per randomized unit and **exactly** these columns:
 | File | Columns | Meaning |
 | --- | --- | --- |
 | `assignments.csv` | `unit_id,arm,assigned_at` | One pre-outcome assignment to `control` or `treatment` |
-| `outcomes.csv` | `unit_id,observed_at,accepted,net_revenue_usd,variable_cost_usd` | Accepted paid conversion and net revenue after refunds |
+| `outcomes.csv` | `unit_id,observed_at,accepted,net_revenue_usd,variable_cost_usd` | Accepted paid conversion, revenue after refunds, and variable fulfillment/payment costs |
 | `costs.csv` | `unit_id,media_cost_usd,inference_cost_usd,infrastructure_cost_usd,experiment_cost_usd` | Costs allocated to that same unit |
+| `plan.json` | Versioned experiment design | Fixed assignment and observation windows, expected allocation, minimum sample, contribution threshold and cost guardrail |
 
-Timestamps must be UTC ISO-8601; amounts are nonnegative USD with at most two decimal places. The three unit sets must match exactly, each arm needs at least two units, and every outcome time must follow its assignment time. `accepted=0` requires zero net revenue. Missing, duplicate, extra, malformed, or contradictory records fail closed. Operationally, the experiment owner must document the randomization unit, attribution window, refund policy, cost allocation, exclusions, and interference risks before using results for decisions.
+Timestamps must be UTC ISO-8601; amounts are nonnegative USD with at most two decimal places. Each input is capped at 64 MiB and 25,000 units for local memory safety; the bootstrap is capped at 20 million unit draws. Larger workloads require a measured scale-out evaluator. The three unit sets must match exactly, each arm needs at least two units, and every outcome time must follow its assignment time. `accepted=0` requires zero net revenue. Missing, duplicate, extra, malformed, or contradictory records fail closed. A supplied plan also constrains assignment and observation dates. Operationally, the experiment owner must document the randomization unit, attribution window, refund policy, cost allocation, exclusions, and interference risks before using results for decisions.
 
 For each unit:
 
@@ -47,7 +55,9 @@ contribution profit = net revenue - variable cost - media cost
                     - inference cost - infrastructure cost - experiment cost
 ```
 
-The scorecard reports per-arm means, treatment-minus-control differences in accepted conversion, revenue, cost and contribution profit, plus a seeded within-arm percentile-bootstrap interval for contribution effect. This is an **intent-to-treat estimate only if** assignment was genuinely random, units were independent, outcomes were complete, and treatment did not affect control. The interval does not repair flawed assignment, repeated peeking, selection bias, spillover, or underpowered tests.
+The versioned scorecard reports per-arm means and treatment-minus-control differences in accepted conversion, revenue, **each cost category**, total cost and contribution profit; descriptive cost and contribution per accepted conversion; a seeded within-arm percentile-bootstrap interval for contribution effect; and daily date/arm economic totals. Per-accepted costs include spending on non-converting units divided by the number of accepted conversions. The plan diagnostic checks sample size, sample-ratio mismatch, and the incremental cost guardrail. Its statuses are **review signals**, never automatic rollout permission. This is an **intent-to-treat estimate only if** assignment was genuinely random, units were independent, outcomes were complete, and treatment did not affect control. The interval does not repair flawed assignment, repeated peeking, selection bias, spillover, or underpowered tests.
+
+The CSV contract remains compatible with the first release; the report protocol is now `growth-decision/v2` because the output gained plan and BI fields. Old v1 scorecards must be regenerated from their original inputs before comparison. The source files and plan are SHA-256 hashed, but hashes are not digital signatures or proof of provenance.
 
 ## Architecture
 
@@ -59,6 +69,7 @@ flowchart LR
     R --> E[Contribution economics]
     E --> T[Treatment-control estimator]
     T --> S[Versioned scorecard]
+    S --> B[Daily BI snapshot and restatement diff]
     S --> V[Offline verifier]
     V --> H[Human decision review]
 ```
@@ -66,11 +77,15 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph OSS[Current inspectable OSS core]
-        CSV[Portable CSV contract]
+        CSV[Portable CSV and experiment-plan contracts]
         K[Local economics and effect kernel]
         VER[Deterministic verifier]
+        BI[Daily BI and snapshot diff]
+        PROP[External agent proposal validator]
         FIX[Synthetic fixture and tests]
         CSV --> K --> VER
+        K --> BI
+        VER --> PROP
         FIX --> K
     end
     subgraph Next[Proposed, not implemented]
@@ -78,7 +93,7 @@ flowchart TB
         F[Vercel Flags assignment adapter]
         W[Cloudflare analytics and logs adapter]
         B[Billing and commerce reconciliation]
-        AG[Evidence-linked analyst agents]
+        AG[LLM analyst execution]
         ICE[Optional Parquet or Iceberg history]
     end
     subgraph Commercial[Possible separately operated commercial layer]
@@ -101,13 +116,15 @@ flowchart TB
 
 | Gate | Deliverable | Evidence required |
 | --- | --- | --- |
-| 0 — current | Synthetic local scorer and verifier | Reproducible output, malformed-input rejection, no live claims |
+| 0 — current | Synthetic local scorer, plan gates, daily BI, verifier and CI | Reproducible output, malformed-input rejection, no live claims |
 | 1 | Read-only SaaS signup-to-paid pilot | Written data permission, locked experiment plan, billing/cost reconciliation, human review |
 | 2 | PostHog/Vercel/Cloudflare export adapters | Contract tests against permitted exports, event-loss and join-error measurements |
 | 3 | Continuous BI and agent-assisted analysis | Freshness, query-cost, false-alert, citation and recommendation-acceptance benchmarks |
 | 4 | Approved operational integration | Independent lift replication, spend limits, rollback, operator override audit |
 
 The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would join Cloudflare event data to downstream accepted outcomes while making sampling and retention explicit. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
+
+For the detailed [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [OSS/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
 
 ## Relationship to existing A2Z projects
 

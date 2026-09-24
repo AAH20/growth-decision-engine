@@ -22,4 +22,5 @@ jobs:
           --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
           --outcomes growth_decision_engine/fixtures/outcomes.synthetic.csv
           --costs growth_decision_engine/fixtures/costs.synthetic.csv
+          --plan growth_decision_engine/fixtures/plan.synthetic.json
           --scorecard outputs/demo-scorecard.json

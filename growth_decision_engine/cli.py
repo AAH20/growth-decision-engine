@@ -19,11 +19,18 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="run the explicitly synthetic example")
     demo.add_argument("--output", default="outputs/demo-scorecard.json")
+    diff = commands.add_parser("bi-diff", help="identify additions, removals and restatements between scorecards")
+    diff.add_argument("before")
+    diff.add_argument("after")
+    proposal = commands.add_parser("proposal-check", help="validate an external analyst proposal against a scorecard")
+    proposal.add_argument("--scorecard", required=True)
+    proposal.add_argument("--proposal", required=True)
     for name in ("score", "verify"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--assignments", required=True)
         cmd.add_argument("--outcomes", required=True)
         cmd.add_argument("--costs", required=True)
+        cmd.add_argument("--plan", help="fixed-horizon experiment plan JSON; strongly recommended for real pilots")
         cmd.add_argument("--seed", type=int, default=1729)
         cmd.add_argument("--resamples", type=int, default=2000)
         if name == "score":
@@ -32,15 +39,23 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "bi-diff":
+            from .bi import diff_snapshots
+            print(canonical_json(diff_snapshots(args.before, args.after)), end="")
+            return 0
+        if args.command == "proposal-check":
+            from .proposals import check_proposal
+            print(canonical_json(check_proposal(args.scorecard, args.proposal)), end="")
+            return 0
         if args.command == "demo":
             directory = _fixture_dir()
-            result = score(directory / "assignments.synthetic.csv", directory / "outcomes.synthetic.csv", directory / "costs.synthetic.csv")
+            result = score(directory / "assignments.synthetic.csv", directory / "outcomes.synthetic.csv", directory / "costs.synthetic.csv", plan=directory / "plan.synthetic.json")
             path = Path(args.output)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(canonical_json(result), encoding="utf-8")
             print(path)
             return 0
-        result = score(args.assignments, args.outcomes, args.costs, seed=args.seed, resamples=args.resamples)
+        result = score(args.assignments, args.outcomes, args.costs, plan=args.plan, seed=args.seed, resamples=args.resamples)
         if args.command == "score":
             path = Path(args.output)
             path.parent.mkdir(parents=True, exist_ok=True)

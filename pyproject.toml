@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "growth-decision-engine"
-version = "0.1.0"
-description = "Offline experiment-to-profit scorecards for product and marketing decisions"
+version = "0.2.0"
+description = "Open-source marketing analytics and incrementality testing for contribution profit"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
@@ -16,4 +16,4 @@ growth-decision = "growth_decision_engine.cli:main"
 include = ["growth_decision_engine*"]
 
 [tool.setuptools.package-data]
-growth_decision_engine = ["fixtures/*.csv"]
+growth_decision_engine = ["fixtures/*.csv", "fixtures/*.json"]

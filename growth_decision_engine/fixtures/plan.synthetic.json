@@ -1,0 +1,13 @@
+{
+  "schema_version": "growth-decision-plan/v1",
+  "experiment_id": "synthetic-signup-to-paid-001",
+  "unit_type": "synthetic_account",
+  "registered_at": "2025-12-30T00:00:00Z",
+  "assignment_start": "2025-12-31T00:00:00Z",
+  "assignment_end": "2026-01-02T00:00:00Z",
+  "observation_end": "2026-01-09T00:00:00Z",
+  "control_allocation": 0.5,
+  "minimum_units_per_arm": 4,
+  "minimum_contribution_effect_usd": "1.00",
+  "maximum_incremental_cost_usd_per_unit": "10.00"
+}
