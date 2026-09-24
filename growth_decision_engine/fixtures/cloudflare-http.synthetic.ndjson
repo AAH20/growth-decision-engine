@@ -1,0 +1,5 @@
+{"EdgeResponseStatus": 200, "EdgeStartTimestamp": "2026-01-03T00:00:00Z", "RayID": "R001", "SampleInterval": 1}
+{"EdgeResponseStatus": 200, "EdgeStartTimestamp": "2026-01-03T00:00:00Z", "RayID": "R002", "SampleInterval": 1}
+{"EdgeResponseStatus": 404, "EdgeStartTimestamp": "2026-01-03T00:00:00Z", "RayID": "R003", "SampleInterval": 1}
+{"EdgeResponseStatus": 500, "EdgeStartTimestamp": "2026-01-03T00:00:00Z", "RayID": "R004", "SampleInterval": 2}
+{"EdgeResponseStatus": 302, "EdgeStartTimestamp": "2026-01-03T00:00:00Z", "RayID": "R005", "SampleInterval": 1}

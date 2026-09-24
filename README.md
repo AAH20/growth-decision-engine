@@ -36,6 +36,8 @@ python3 -m growth_decision_engine bi-diff \
 
 For a read-only pilot, `pilot` additionally reconciles signed billing transactions (including refunds) and five cost categories to every scored unit, then writes a replayable packet with source hashes and a pending human-review status. Run `verify-pilot` against the same exports before review. The [pilot contract and synthetic commands](docs/read-only-pilot.md) specify the manifest, ledgers and failure cases. Permission and source identity remain operator declarations; no customer pilot has been completed by this repository.
 
+The [provider export audits](docs/provider-export-audits.md) check customer-projected PostHog or Vercel flag events against the assignment census and summarize allowlisted Cloudflare HTTP Logpush records with sampling explicit. These are local, synthetic-tested contracts; they neither authenticate to providers nor replace randomized assignments. No provider-native export has yet been validated.
+
 External analyst agents can submit a proposal JSON to `python3 -m growth_decision_engine proposal-check --scorecard outputs/demo-scorecard.json --proposal proposal.json`. The validator pins the exact report hash, resolves cited metric paths, and permits only review-oriented next steps. It checks **structural grounding**, not whether the natural-language finding is statistically sound. See [the proposal contract](docs/agent-proposals.md).
 
 ## Data contract
@@ -104,17 +106,19 @@ flowchart TB
         FIX[Synthetic fixture and tests]
         CAL[Synthetic calibration and runtime benchmark]
         PILOT[Ledger reconciliation and pilot verifier]
+        AUDIT[Flag exposure and sampled edge-log audits]
         CSV --> K --> VER
         K --> BI
         VER --> PROP
         FIX --> K
         K --> CAL
         K --> PILOT
+        CSV --> AUDIT
     end
     subgraph Next[Proposed, not implemented]
-        P[PostHog event and experiment export adapter]
-        F[Vercel Flags assignment adapter]
-        W[Cloudflare analytics and logs adapter]
+        P[Authenticated PostHog export collector]
+        F[Authenticated Vercel flag data collector]
+        W[Authenticated Cloudflare Logpush collector]
         B[Live billing and commerce connectors]
         AG[LLM analyst execution]
         ICE[Optional Parquet or Iceberg history]
@@ -125,9 +129,9 @@ flowchart TB
         OPT[Approved experiment operations]
         NET[Opt-in aggregated benchmark network]
     end
-    P --> CSV
-    F --> CSV
-    W --> CSV
+    P --> AUDIT
+    F --> AUDIT
+    W --> AUDIT
     B --> CSV
     K -. future evidence .-> AG
     K -. future history .-> ICE
@@ -141,13 +145,13 @@ flowchart TB
 | --- | --- | --- |
 | 0 — complete | Synthetic local scorer, plan gates, daily BI, verifier, CI and calibration harness | Reproducible output, malformed-input rejection, measured estimator limits, no live claims |
 | 1 — offline tooling shipped; real pilot pending | Read-only signup-to-paid pilot packet with transaction-level billing and cost reconciliation | Customer permission and locked plan outside CLI, customer exports, independent source-completeness check, human review |
-| 2 | PostHog/Vercel/Cloudflare export adapters | Contract tests against permitted exports, event-loss and join-error measurements |
+| 2 — local audits shipped; native validation pending | PostHog/Vercel flag-evaluation projections and Cloudflare Logpush context audits | Contract tests against permitted native exports, provider source counts, event-loss and join-error measurements |
 | 3 | Continuous BI and agent-assisted analysis | Freshness, query-cost, false-alert, citation and recommendation-acceptance benchmarks |
 | 4 | Approved operational integration | Independent lift replication, spend limits, rollback, operator override audit |
 
-The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would join Cloudflare event data to downstream accepted outcomes while making sampling and retention explicit. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
+The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would use Cloudflare request context in a customer-approved workflow; a causal join would require a separately validated, privacy-preserving unit linkage and complete assignment census. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
 
-For the detailed [read-only pilot](docs/read-only-pilot.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
+For the detailed [read-only pilot](docs/read-only-pilot.md), [provider export audits](docs/provider-export-audits.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
 
 ## Relationship to existing A2Z projects
 

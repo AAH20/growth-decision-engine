@@ -1,0 +1,8 @@
+event_id,unit_id,flag_key,variant,observed_at
+P001,S001,checkout-experiment,control,2026-01-02T00:00:00Z
+P002,S002,checkout-experiment,control,2026-01-02T00:00:00Z
+P003,S003,checkout-experiment,control,2026-01-02T00:00:00Z
+P004,S005,checkout-experiment,treatment,2026-01-02T00:00:00Z
+P005,S006,checkout-experiment,treatment,2026-01-02T00:00:00Z
+P006,S007,checkout-experiment,treatment,2026-01-02T00:00:00Z
+P007,S007,checkout-experiment,treatment,2026-01-02T00:00:00Z

@@ -64,7 +64,7 @@ flowchart LR
 | Scorecard to agent | Evidence references resolve to immutable scorecard fields | Reject unsupported or uncited claims |
 | Agent to platform | Human approval, scoped capability, spend cap, dry run, rollback | No mutation when any control is missing |
 
-The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, transaction-level billing/spend reconciliation, pilot packet, offline verifiers, and a read-only external agent-proposal validator. The local ledgers are customer-controlled exports; they are not authenticated provider connectors. LLM execution, provider ingestion, and the action boundary remain proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
+The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, transaction-level billing/spend reconciliation, pilot packet, offline verifiers, a read-only external agent-proposal validator, and local [provider export audits](provider-export-audits.md). The local ledgers and provider projections are customer-controlled exports; they are not authenticated connectors. LLM execution, provider ingestion, and the action boundary remain proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
 
 ## Deployment topology to build next
 
@@ -78,8 +78,8 @@ Only compare BI snapshots after each scorecard has passed `verify` against its o
 
 ## The first two adapters
 
-- **Feature-flag experiment:** map a provider assignment export to unit IDs and arms. Join billing outcomes and allocated inference/infrastructure costs for the same units and fixed horizon. Validate that the provider's exposure semantics match the declared unit and that every assigned unit is accounted for.
-- **Edge analytics:** treat aggregate or sampled edge telemetry as descriptive context until a stable unit-level assignment/outcome join exists. Record the sampling design and retention window; never feed sampled counts into the unit-level causal estimator as if they were a complete census.
+- **Feature-flag experiment:** maintain an independently exported assignment census, then use `exposure-audit` to compare customer-projected PostHog or Vercel flag events to that census. Join billing outcomes and allocated inference/infrastructure costs for the same units and fixed horizon. Validate provider event semantics and source counts against a permitted native export before calling this a provider adapter.
+- **Edge analytics:** `cloudflare-audit` reads allowlisted HTTP Logpush NDJSON as descriptive context and reports declared job/upstream sampling. A sampled request count is not a unit-level assignment/outcome join; never feed it into the causal estimator as if it were a complete census.
 
 Do not ship a generic adapter that accepts arbitrary columns with silent coercion. Each adapter needs a versioned source contract, fixture, negative tests, source coverage test, and documented capability limit.
 

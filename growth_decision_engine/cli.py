@@ -32,6 +32,18 @@ def main(argv: list[str] | None = None) -> int:
     calibration.add_argument("--effect-cents", type=int, default=300)
     calibration.add_argument("--seed", type=int, default=1729)
     calibration.add_argument("--output", help="optional JSON output path; stdout is always printed")
+    exposure = commands.add_parser("exposure-audit", help="audit projected PostHog or Vercel flag events against assignments")
+    exposure.add_argument("--provider", choices=("posthog", "vercel"), required=True)
+    exposure.add_argument("--assignments", required=True)
+    exposure.add_argument("--exposures", required=True)
+    exposure.add_argument("--plan", required=True)
+    exposure.add_argument("--flag-key", required=True)
+    exposure.add_argument("--expected-events", type=int, required=True)
+    exposure.add_argument("--output", required=True)
+    edge = commands.add_parser("cloudflare-audit", help="descriptive audit of allowlisted HTTP Logpush NDJSON")
+    edge.add_argument("--logs", required=True)
+    edge.add_argument("--job-manifest", required=True)
+    edge.add_argument("--output", required=True)
     for name in ("pilot", "verify-pilot"):
         cmd = commands.add_parser(name, help="reconcile read-only pilot exports" if name == "pilot" else "recompute a pilot packet")
         for field in ("assignments", "outcomes", "costs", "billing", "spend", "plan", "manifest"):
@@ -56,6 +68,18 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command in ("exposure-audit", "cloudflare-audit"):
+            from .provider_exports import cloudflare_audit, exposure_audit
+            result = (exposure_audit(args.assignments, args.exposures, args.plan,
+                                     provider=args.provider, flag_key=args.flag_key,
+                                     expected_events=args.expected_events)
+                      if args.command == "exposure-audit" else
+                      cloudflare_audit(args.logs, args.job_manifest))
+            path = Path(args.output)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(canonical_json(result), encoding="utf-8")
+            print(path)
+            return 0
         if args.command in ("pilot", "verify-pilot"):
             from .pilot import pilot_packet, verify_pilot
             sources = (args.assignments, args.outcomes, args.costs, args.billing,

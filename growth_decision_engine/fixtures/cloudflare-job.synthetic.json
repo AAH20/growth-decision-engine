@@ -1,0 +1,8 @@
+{
+  "dataset": "http_requests",
+  "expected_records": 5,
+  "output_format": "ndjson",
+  "sample_rate": 0.5,
+  "schema_version": "growth-decision-cloudflare-logpush/v1",
+  "timestamp_format": "rfc3339"
+}

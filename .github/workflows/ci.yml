@@ -44,3 +44,26 @@ jobs:
           --plan growth_decision_engine/fixtures/plan.synthetic.json
           --manifest growth_decision_engine/fixtures/pilot.synthetic.json
           --packet outputs/pilot-packet.json
+      - run: >-
+          python -m growth_decision_engine exposure-audit
+          --provider posthog
+          --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
+          --exposures growth_decision_engine/fixtures/posthog-exposures.synthetic.csv
+          --plan growth_decision_engine/fixtures/plan.synthetic.json
+          --flag-key checkout-experiment
+          --expected-events 7
+          --output outputs/posthog-exposure-audit.json
+      - run: >-
+          python -m growth_decision_engine exposure-audit
+          --provider vercel
+          --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
+          --exposures growth_decision_engine/fixtures/vercel-exposures.synthetic.csv
+          --plan growth_decision_engine/fixtures/plan.synthetic.json
+          --flag-key checkout-experiment
+          --expected-events 8
+          --output outputs/vercel-exposure-audit.json
+      - run: >-
+          python -m growth_decision_engine cloudflare-audit
+          --logs growth_decision_engine/fixtures/cloudflare-http.synthetic.ndjson
+          --job-manifest growth_decision_engine/fixtures/cloudflare-job.synthetic.json
+          --output outputs/cloudflare-audit.json
