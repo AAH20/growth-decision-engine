@@ -25,6 +25,13 @@ def main(argv: list[str] | None = None) -> int:
     proposal = commands.add_parser("proposal-check", help="validate an external analyst proposal against a scorecard")
     proposal.add_argument("--scorecard", required=True)
     proposal.add_argument("--proposal", required=True)
+    calibration = commands.add_parser("calibrate", help="reproducible synthetic A/A and known-effect stress test")
+    calibration.add_argument("--replications", type=int, default=100)
+    calibration.add_argument("--units-per-arm", type=int, default=80)
+    calibration.add_argument("--resamples", type=int, default=200)
+    calibration.add_argument("--effect-cents", type=int, default=300)
+    calibration.add_argument("--seed", type=int, default=1729)
+    calibration.add_argument("--output", help="optional JSON output path; stdout is always printed")
     for name in ("score", "verify"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--assignments", required=True)
@@ -39,6 +46,19 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "calibrate":
+            from .calibration import calibrate
+            result = canonical_json(calibrate(replications=args.replications,
+                                              units_per_arm=args.units_per_arm,
+                                              resamples=args.resamples,
+                                              effect_cents=args.effect_cents,
+                                              seed=args.seed))
+            if args.output:
+                path = Path(args.output)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(result, encoding="utf-8")
+            print(result, end="")
+            return 0
         if args.command == "bi-diff":
             from .bi import diff_snapshots
             print(canonical_json(diff_snapshots(args.before, args.after)), end="")

@@ -2,7 +2,7 @@
 
 The commercial hypothesis is that teams will pay to **operate trustworthy cross-platform decisions continuously**, while the measurement protocol should stay inspectable and portable. No revenue, partnership, or platform acquisition is assumed.
 
-| Open-source, shipped or planned | Commercial service candidate |
+| Inspectable baseline, shipped or planned | Commercial service candidate |
 | --- | --- |
 | Versioned CSV/plan contracts, strict reconciliation, economics, estimator, verifier | Managed, permissioned source ingestion and reliability operations |
 | Synthetic fixtures, negative tests, CI and evaluation methodology | Enterprise tenant isolation, retention controls, SLA and support |

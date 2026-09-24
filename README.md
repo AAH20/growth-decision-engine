@@ -1,6 +1,6 @@
 # Marketing Analytics & Incrementality Testing — Growth Decision Engine
 
-**Open-source marketing analytics for the business value of product and campaign experiments.** The current release takes customer-controlled CSV exports of assignment, accepted outcomes, and unit costs. It reconciles every randomized unit, calculates contribution profit, estimates treatment-minus-control effects, applies a declared experiment plan, and emits a deterministic scorecard with daily BI rows that can be verified offline. The bundled data is entirely synthetic.
+**Inspectable marketing analytics for the business value of product and campaign experiments.** The current release takes customer-controlled CSV exports of assignment, accepted outcomes, and unit costs. It reconciles every randomized unit, calculates contribution profit, estimates treatment-minus-control effects, applies a declared experiment plan, and emits a deterministic scorecard with daily BI rows that can be verified offline. The bundled data is entirely synthetic.
 
 This is a local measurement kernel with a read-only evidence contract for external analyst agents. It is **not** a deployed marketing platform, a live PostHog/Cloudflare/Vercel connector, an LLM-powered agent, an autonomous campaign agent, or proof that a real experiment increased profit.
 
@@ -17,6 +17,7 @@ python3 -m growth_decision_engine verify \
   --plan growth_decision_engine/fixtures/plan.synthetic.json \
   --scorecard outputs/demo-scorecard.json
 python3 -m unittest discover -s tests -v
+python3 -m growth_decision_engine calibrate --output outputs/calibration-synthetic.json
 ```
 
 Use your own **permitted, de-identified** exports with `score`:
@@ -59,6 +60,19 @@ The versioned scorecard reports per-arm means and treatment-minus-control differ
 
 The CSV contract remains compatible with the first release; the report protocol is now `growth-decision/v2` because the output gained plan and BI fields. Old v1 scorecards must be regenerated from their original inputs before comparison. The source files and plan are SHA-256 hashed, but hashes are not digital signatures or proof of provenance.
 
+## Statistical calibration and runtime evidence
+
+`calibrate` reuses the **same interval estimator** as `score` on independently generated synthetic A/A and known-effect A/B experiments. It reports a null false-positive rate, known-effect interval coverage, positive-detection rate, and 95% Wilson bands for Monte Carlo uncertainty. With the default seed, 100 replications, 80 units per arm, 200 bootstrap resamples and a $3 known effect, the synthetic diagnostic returned **4/100 null false positives, 89/100 intervals containing the true effect, and 8/100 positive detections**. These are observed counts for one deliberately skewed distribution, not guarantees or field performance. In particular, the low detection rate warns against treating an inconclusive scorecard as evidence of no effect. See [evaluation protocol](docs/evaluation-protocol.md) for the assumptions and reproducible commands.
+
+The full CSV-to-scorecard benchmark is also executable locally:
+
+```bash
+python3 -m benchmarks.score_runtime --units 1000 --resamples 200
+python3 -m benchmarks.score_runtime --units 10000 --resamples 200
+```
+
+On one macOS arm64 host with Python 3.14.7, those runs took 0.2396 s and 2.3669 s, with 1.64 MB and 15.96 MB peak **traced Python allocations**, respectively. File generation is excluded; CSV parsing, reconciliation, economics and bootstrap are included. These are single-run machine measurements, not an SLA, peak process RSS, or proof of scaling beyond the 25,000-unit cap.
+
 ## Architecture
 
 ```mermaid
@@ -69,6 +83,7 @@ flowchart LR
     R --> E[Contribution economics]
     E --> T[Treatment-control estimator]
     T --> S[Versioned scorecard]
+    T --> CAL[Synthetic A/A and known-effect calibration]
     S --> B[Daily BI snapshot and restatement diff]
     S --> V[Offline verifier]
     V --> H[Human decision review]
@@ -76,17 +91,19 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph OSS[Current inspectable OSS core]
+    subgraph Core[Current inspectable core]
         CSV[Portable CSV and experiment-plan contracts]
         K[Local economics and effect kernel]
         VER[Deterministic verifier]
         BI[Daily BI and snapshot diff]
         PROP[External agent proposal validator]
         FIX[Synthetic fixture and tests]
+        CAL[Synthetic calibration and runtime benchmark]
         CSV --> K --> VER
         K --> BI
         VER --> PROP
         FIX --> K
+        K --> CAL
     end
     subgraph Next[Proposed, not implemented]
         P[PostHog event and experiment export adapter]
@@ -116,7 +133,7 @@ flowchart TB
 
 | Gate | Deliverable | Evidence required |
 | --- | --- | --- |
-| 0 — current | Synthetic local scorer, plan gates, daily BI, verifier and CI | Reproducible output, malformed-input rejection, no live claims |
+| 0 — current | Synthetic local scorer, plan gates, daily BI, verifier, CI and calibration harness | Reproducible output, malformed-input rejection, measured estimator limits, no live claims |
 | 1 | Read-only SaaS signup-to-paid pilot | Written data permission, locked experiment plan, billing/cost reconciliation, human review |
 | 2 | PostHog/Vercel/Cloudflare export adapters | Contract tests against permitted exports, event-loss and join-error measurements |
 | 3 | Continuous BI and agent-assisted analysis | Freshness, query-cost, false-alert, citation and recommendation-acceptance benchmarks |
@@ -124,7 +141,7 @@ flowchart TB
 
 The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would join Cloudflare event data to downstream accepted outcomes while making sampling and retention explicit. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
 
-For the detailed [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [OSS/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
+For the detailed [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
 
 ## Relationship to existing A2Z projects
 

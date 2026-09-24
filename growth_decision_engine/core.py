@@ -6,13 +6,12 @@ import csv
 import hashlib
 import io
 import json
-import math
-import random
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from .plan import PlanError, load_plan, sample_ratio_diagnostic
+from .stats import contribution_interval
 
 PROTOCOL = "growth-decision/v2"
 MAX_INPUT_BYTES = 64 * 1024 * 1024
@@ -164,16 +163,11 @@ def score(assignments: str | Path, outcomes: str | Path, costs: str | Path, *, p
         difference = _mean([row[field] for row in arms["treatment"]]) - _mean([row[field] for row in arms["control"]])
         return difference if field == "accepted" else difference / 100
 
-    rng = random.Random(seed)
-    draws = []
-    for _ in range(resamples):
-        sampled = {}
-        for arm, rows in arms.items():
-            sampled[arm] = _mean([rng.choice(rows)["contribution"] for _ in rows])
-        draws.append(sampled["treatment"] - sampled["control"])
-    draws.sort()
-    lower = draws[math.floor(0.025 * (resamples - 1))] / 100
-    upper = draws[math.ceil(0.975 * (resamples - 1))] / 100
+    lower, upper = contribution_interval(
+        [row["contribution"] for row in arms["control"]],
+        [row["contribution"] for row in arms["treatment"]],
+        seed=seed, resamples=resamples,
+    )
 
     fixtures = Path(__file__).resolve().parent / "fixtures"
     bundled = {
