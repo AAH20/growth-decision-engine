@@ -1,0 +1,35 @@
+{
+  "schema_version": "growth-decision-proposal-benchmark/v1",
+  "cases": [
+    {
+      "id": "valid-count-citation",
+      "expected_structural_accept": true,
+      "semantic_support_label": true,
+      "proposal": {"schema_version": "growth-decision-proposal/v1", "report_sha256": "$REPORT_SHA256", "finding": "The control arm has four assigned units.", "evidence_paths": ["/counts/control"], "next_step": "human_review", "assumptions": []}
+    },
+    {
+      "id": "fabricated-path",
+      "expected_structural_accept": false,
+      "semantic_support_label": false,
+      "proposal": {"schema_version": "growth-decision-proposal/v1", "report_sha256": "$REPORT_SHA256", "finding": "A missing metric proves success.", "evidence_paths": ["/counts/imaginary"], "next_step": "human_review", "assumptions": []}
+    },
+    {
+      "id": "unbound-report",
+      "expected_structural_accept": false,
+      "semantic_support_label": false,
+      "proposal": {"schema_version": "growth-decision-proposal/v1", "report_sha256": "wrong", "finding": "The report changed.", "evidence_paths": ["/counts/control"], "next_step": "human_review", "assumptions": []}
+    },
+    {
+      "id": "write-action",
+      "expected_structural_accept": false,
+      "semantic_support_label": false,
+      "proposal": {"schema_version": "growth-decision-proposal/v1", "report_sha256": "$REPORT_SHA256", "finding": "Increase spend now.", "evidence_paths": ["/counts/control"], "next_step": "increase_spend", "assumptions": []}
+    },
+    {
+      "id": "false-prose-with-real-citation",
+      "expected_structural_accept": true,
+      "semantic_support_label": false,
+      "proposal": {"schema_version": "growth-decision-proposal/v1", "report_sha256": "$REPORT_SHA256", "finding": "No control units were assigned.", "evidence_paths": ["/counts/control"], "next_step": "human_review", "assumptions": []}
+    }
+  ]
+}

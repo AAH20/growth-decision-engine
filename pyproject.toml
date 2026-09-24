@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "growth-decision-engine"
-version = "0.5.0"
+version = "0.6.0"
 description = "Inspectable marketing analytics and incrementality testing for contribution profit"
 requires-python = ">=3.10"
 license = {text = "MIT"}

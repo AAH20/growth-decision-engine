@@ -22,6 +22,15 @@ def main(argv: list[str] | None = None) -> int:
     diff = commands.add_parser("bi-diff", help="identify additions, removals and restatements between scorecards")
     diff.add_argument("before")
     diff.add_argument("after")
+    monitor = commands.add_parser("bi-monitor", help="replay a local pilot series and emit review-only BI alerts")
+    monitor.add_argument("--series", required=True)
+    monitor.add_argument("--as-of", required=True)
+    monitor.add_argument("--freshness-hours", type=int, default=24)
+    monitor.add_argument("--output", required=True)
+    benchmark = commands.add_parser("proposal-bench", help="measure structural proposal checks on synthetic labeled cases")
+    benchmark.add_argument("--scorecard", required=True)
+    benchmark.add_argument("--suite", required=True)
+    benchmark.add_argument("--output", required=True)
     proposal = commands.add_parser("proposal-check", help="validate an external analyst proposal against a scorecard")
     proposal.add_argument("--scorecard", required=True)
     proposal.add_argument("--proposal", required=True)
@@ -68,6 +77,18 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command in ("bi-monitor", "proposal-bench"):
+            if args.command == "bi-monitor":
+                from .monitor import monitor_series
+                result = monitor_series(args.series, as_of=args.as_of, freshness_hours=args.freshness_hours)
+            else:
+                from .proposal_benchmark import benchmark_proposals
+                result = benchmark_proposals(args.scorecard, args.suite)
+            path = Path(args.output)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(canonical_json(result), encoding="utf-8")
+            print(path)
+            return 0
         if args.command in ("exposure-audit", "cloudflare-audit"):
             from .provider_exports import cloudflare_audit, exposure_audit
             result = (exposure_audit(args.assignments, args.exposures, args.plan,

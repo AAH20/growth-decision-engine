@@ -64,7 +64,7 @@ flowchart LR
 | Scorecard to agent | Evidence references resolve to immutable scorecard fields | Reject unsupported or uncited claims |
 | Agent to platform | Human approval, scoped capability, spend cap, dry run, rollback | No mutation when any control is missing |
 
-The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, transaction-level billing/spend reconciliation, pilot packet, offline verifiers, a read-only external agent-proposal validator, and local [provider export audits](provider-export-audits.md). The local ledgers and provider projections are customer-controlled exports; they are not authenticated connectors. LLM execution, provider ingestion, and the action boundary remain proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
+The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, transaction-level billing/spend reconciliation, pilot packet, offline verifiers, a read-only external agent-proposal validator, local [provider export audits](provider-export-audits.md), and a replay-verified [offline BI monitor and proposal contract benchmark](continuous-bi.md). The local ledgers and provider projections are customer-controlled exports; they are not authenticated connectors. LLM execution, provider ingestion, scheduling, and the action boundary remain proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
 
 ## Deployment topology to build next
 
@@ -74,7 +74,7 @@ The current CLI implements the strict three-file join, declared plan checks, sco
 4. **Evaluation worker.** Run a pinned scorer image against a frozen source snapshot and plan. Write immutable report artifacts with input hashes, code revision, environment, warnings, and performance metrics. Re-run on late refunds or costs and record a restatement, rather than overwriting history.
 5. **Review service.** Expose reports and agent proposals to named operators. Keep action execution in a separate service with narrow credentials, idempotency keys, limits, rollback, and an append-only audit trail.
 
-Only compare BI snapshots after each scorecard has passed `verify` against its own source files and plan. `bi-diff` describes changes; it does not authenticate its input reports.
+Only compare BI snapshots after each scorecard has passed `verify` against its own source files and plan. `bi-diff` describes changes; it does not authenticate its input reports. `bi-monitor` replays each pilot packet against its declared local source files before the latest adjacent comparison, but still cannot authenticate source systems or verify the operator's permissions.
 
 ## The first two adapters
 

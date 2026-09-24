@@ -22,7 +22,13 @@ def _load(path: str | Path) -> dict:
 
 
 def diff_snapshots(before_path: str | Path, after_path: str | Path) -> dict:
-    before, after = _load(before_path), _load(after_path)
+    return diff_reports(_load(before_path), _load(after_path))
+
+
+def diff_reports(before: dict, after: dict) -> dict:
+    """Diff already validated scorecard objects from replayed pilot packets."""
+    if before.get("protocol") != PROTOCOL or after.get("protocol") != PROTOCOL:
+        raise DataError("cannot diff unsupported scorecard protocols")
     old_plan, new_plan = before.get("plan"), after.get("plan")
     if (old_plan or {}).get("experiment_id") != (new_plan or {}).get("experiment_id"):
         raise DataError("cannot diff different experiments")

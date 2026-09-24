@@ -18,6 +18,11 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m growth_decision_engine demo --output outputs/demo-scorecard.json
       - run: >-
+          python -m growth_decision_engine proposal-bench
+          --scorecard outputs/demo-scorecard.json
+          --suite growth_decision_engine/fixtures/proposal-bench.synthetic.json
+          --output outputs/proposal-bench.json
+      - run: >-
           python -m growth_decision_engine verify
           --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
           --outcomes growth_decision_engine/fixtures/outcomes.synthetic.csv

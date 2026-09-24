@@ -200,10 +200,12 @@ def pilot_packet(assignments: str | Path, outcomes: str | Path, costs: str | Pat
     }
 
 
-def verify_pilot(packet: str | Path, *args: str | Path, seed: int = 1729, resamples: int = 2000) -> None:
+def verify_pilot(packet: str | Path, *args: str | Path, seed: int = 1729, resamples: int = 2000) -> dict:
     try:
         expected = json.loads(Path(packet).read_text(encoding="utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DataError("pilot packet must be UTF-8 JSON") from exc
-    if expected != pilot_packet(*args, seed=seed, resamples=resamples):
+    recomputed = pilot_packet(*args, seed=seed, resamples=resamples)
+    if expected != recomputed:
         raise DataError("pilot verification failed: packet differs from recomputed sources")
+    return recomputed
