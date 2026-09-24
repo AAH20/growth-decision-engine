@@ -16,6 +16,7 @@ The benchmark must measure **statistical correctness, data quality, runtime cost
 | --- | --- | --- |
 | Parser and contract | Duplicates, missing rows, padded fields, invalid dates, NaN, negative costs, extra columns, huge files | Fail closed with precise error; no partial scorecard |
 | Economic arithmetic | Refund-adjusted revenue, per-unit costs, zero converters, high-spend treatment | Cent-level agreement with independently computed examples |
+| Pilot ledger reconciliation | Signed billing/refund transactions and five cost categories against scored units | Exact per-unit agreement; reject unknown/duplicate/late transactions and altered packets |
 | A/A calibration | One shipped skewed-profit distribution; additional sample sizes and distributions remain | False-positive count and Wilson band reported; characterize sensitivity before production claims |
 | A/B power | One shipped known-effect scenario; variance and allocation grid remains | Detection and coverage measured, not inferred from one fixture |
 | Assignment integrity | Sample-ratio mismatch, late assignment, unit reuse, spillover scenarios | Diagnostics block or downgrade claims |
@@ -23,7 +24,7 @@ The benchmark must measure **statistical correctness, data quality, runtime cost
 | Agent grounding | Unsupported metric, fabricated citation, contradictory recommendation | Reject proposal or require human review |
 | Runtime | Shipped 1k and 10k local synthetic scorer; 100k requires a scale-out design | Time and traced allocations measured; process RSS and cost per verified decision remain |
 
-The current repository has unit and CLI tests for the parser, economics, plan window, cost guardrail, snapshot diff, verification, structural agent-proposal grounding, and calibration harness. It does **not** yet have multi-distribution calibration, 100k-unit runtime evidence, LLM grounding accuracy benchmarks, provider contract tests, or real pilot evidence. The in-memory Python implementation and 64 MiB per-input limit make that scope explicit.
+The current repository has unit and CLI tests for the parser, economics, plan window, cost guardrail, snapshot diff, verification, pilot-ledger reconciliation, structural agent-proposal grounding, and calibration harness. It does **not** yet have multi-distribution calibration, 100k-unit runtime evidence, LLM grounding accuracy benchmarks, provider contract tests, or real pilot evidence. The in-memory Python implementation and 64 MiB per-input limit make that scope explicit.
 
 Run `python3 -m growth_decision_engine calibrate --output outputs/calibration-synthetic.json` to reproduce the default synthetic simulation. On 2026-09-25 with seed 1729, 100 replications per scenario, 80 units per arm and 200 resamples, it observed 4% null false positives (Wilson 95% band 1.57%-9.84%), 89% known-effect coverage (81.37%-93.75%), and 8% positive detection (4.11%-15.00%) for an additive $3/unit effect. The latter two results show that this small-sample scenario is poorly powered and its percentile interval undercovers the declared 95% target in this simulation. Treat this as a defect-finding diagnostic, not a validated operating characteristic for customer data. Expand scenarios and repair interval behavior before stronger claims.
 

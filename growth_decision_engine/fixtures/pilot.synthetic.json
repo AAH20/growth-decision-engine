@@ -1,0 +1,23 @@
+{
+  "expected_net_revenue_usd": "500.00",
+  "expected_rows": {
+    "assignments": 8,
+    "billing": 6,
+    "costs": 8,
+    "outcomes": 8,
+    "spend": 37
+  },
+  "expected_total_cost_usd": "237.00",
+  "experiment_id": "synthetic-signup-to-paid-001",
+  "export_cutoff": "2026-01-10T00:00:00Z",
+  "permission_reference": "synthetic-demo-only",
+  "schema_version": "growth-decision-pilot/v1",
+  "source_labels": {
+    "assignments": "synthetic assignments fixture",
+    "billing": "synthetic billing fixture",
+    "costs": "synthetic costs fixture",
+    "outcomes": "synthetic outcomes fixture",
+    "spend": "synthetic spend fixture"
+  },
+  "source_owner": "synthetic fixture owner"
+}

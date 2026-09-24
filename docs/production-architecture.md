@@ -11,7 +11,7 @@ flowchart LR
         MEDIA[Media and creative costs]
         COMPUTE[Inference and infrastructure costs]
     end
-    subgraph Ingest[Proposed read-only ingestion]
+    subgraph Ingest[Proposed authenticated read-only ingestion]
         AUTH[Scoped source credentials]
         RAW[Immutable source snapshot]
         CHECK[Schema, deduplication and consent checks]
@@ -24,6 +24,8 @@ flowchart LR
         DIAG[Sample and cost diagnostics]
         BI[Daily BI and restatement detection]
         CARD[Versioned scorecard and verifier]
+        LEDGER[Local billing and spend ledger reconciliation]
+        PACK[Pilot packet and offline replay]
     end
     subgraph Action[Proposed action boundary]
         AGENT[Evidence-linked analyst proposals]
@@ -43,7 +45,12 @@ flowchart LR
     ECON --> EST --> CARD
     ECON --> BI --> CARD
     DIAG --> CARD
-    CARD -. proposed .-> AGENT --> REVIEW --> CAP --> ADAPTER
+    BILL -. customer export .-> LEDGER
+    MEDIA -. customer export .-> LEDGER
+    COMPUTE -. customer export .-> LEDGER
+    CARD --> PACK
+    LEDGER --> PACK
+    PACK -. proposed .-> AGENT --> REVIEW --> CAP --> ADAPTER
 ```
 
 ## Contracts between layers
@@ -57,7 +64,7 @@ flowchart LR
 | Scorecard to agent | Evidence references resolve to immutable scorecard fields | Reject unsupported or uncited claims |
 | Agent to platform | Human approval, scoped capability, spend cap, dry run, rollback | No mutation when any control is missing |
 
-The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, offline verifier, and a read-only external agent-proposal validator. LLM execution and everything else in the diagram are proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
+The current CLI implements the strict three-file join, declared plan checks, scorecard, daily BI, transaction-level billing/spend reconciliation, pilot packet, offline verifiers, and a read-only external agent-proposal validator. The local ledgers are customer-controlled exports; they are not authenticated provider connectors. LLM execution, provider ingestion, and the action boundary remain proposed. In particular, it has no authenticated API connector, event queue, durable source snapshot store, multi-tenant isolation, or write-capable platform adapter.
 
 ## Deployment topology to build next
 

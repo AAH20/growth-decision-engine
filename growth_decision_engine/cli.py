@@ -32,6 +32,16 @@ def main(argv: list[str] | None = None) -> int:
     calibration.add_argument("--effect-cents", type=int, default=300)
     calibration.add_argument("--seed", type=int, default=1729)
     calibration.add_argument("--output", help="optional JSON output path; stdout is always printed")
+    for name in ("pilot", "verify-pilot"):
+        cmd = commands.add_parser(name, help="reconcile read-only pilot exports" if name == "pilot" else "recompute a pilot packet")
+        for field in ("assignments", "outcomes", "costs", "billing", "spend", "plan", "manifest"):
+            cmd.add_argument(f"--{field}", required=True)
+        cmd.add_argument("--seed", type=int, default=1729)
+        cmd.add_argument("--resamples", type=int, default=2000)
+        if name == "pilot":
+            cmd.add_argument("--output", required=True)
+        else:
+            cmd.add_argument("--packet", required=True)
     for name in ("score", "verify"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--assignments", required=True)
@@ -46,6 +56,20 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command in ("pilot", "verify-pilot"):
+            from .pilot import pilot_packet, verify_pilot
+            sources = (args.assignments, args.outcomes, args.costs, args.billing,
+                       args.spend, args.plan, args.manifest)
+            if args.command == "pilot":
+                result = pilot_packet(*sources, seed=args.seed, resamples=args.resamples)
+                path = Path(args.output)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(canonical_json(result), encoding="utf-8")
+                print(path)
+            else:
+                verify_pilot(args.packet, *sources, seed=args.seed, resamples=args.resamples)
+                print("VERIFIED: pilot packet and ledgers reproduce exactly")
+            return 0
         if args.command == "calibrate":
             from .calibration import calibrate
             result = canonical_json(calibrate(replications=args.replications,

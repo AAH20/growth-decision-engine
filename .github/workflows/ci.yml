@@ -24,3 +24,23 @@ jobs:
           --costs growth_decision_engine/fixtures/costs.synthetic.csv
           --plan growth_decision_engine/fixtures/plan.synthetic.json
           --scorecard outputs/demo-scorecard.json
+      - run: >-
+          python -m growth_decision_engine pilot
+          --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
+          --outcomes growth_decision_engine/fixtures/outcomes.synthetic.csv
+          --costs growth_decision_engine/fixtures/costs.synthetic.csv
+          --billing growth_decision_engine/fixtures/billing.synthetic.csv
+          --spend growth_decision_engine/fixtures/spend.synthetic.csv
+          --plan growth_decision_engine/fixtures/plan.synthetic.json
+          --manifest growth_decision_engine/fixtures/pilot.synthetic.json
+          --output outputs/pilot-packet.json
+      - run: >-
+          python -m growth_decision_engine verify-pilot
+          --assignments growth_decision_engine/fixtures/assignments.synthetic.csv
+          --outcomes growth_decision_engine/fixtures/outcomes.synthetic.csv
+          --costs growth_decision_engine/fixtures/costs.synthetic.csv
+          --billing growth_decision_engine/fixtures/billing.synthetic.csv
+          --spend growth_decision_engine/fixtures/spend.synthetic.csv
+          --plan growth_decision_engine/fixtures/plan.synthetic.json
+          --manifest growth_decision_engine/fixtures/pilot.synthetic.json
+          --packet outputs/pilot-packet.json
