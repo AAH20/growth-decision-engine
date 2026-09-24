@@ -27,6 +27,15 @@ def main(argv: list[str] | None = None) -> int:
     monitor.add_argument("--as-of", required=True)
     monitor.add_argument("--freshness-hours", type=int, default=24)
     monitor.add_argument("--output", required=True)
+    review_init = commands.add_parser("alert-review-template", help="create a two-reviewer alert label template")
+    review_init.add_argument("--monitor", required=True)
+    review_init.add_argument("--reviewer-a", required=True)
+    review_init.add_argument("--reviewer-b", required=True)
+    review_init.add_argument("--output", required=True)
+    review_eval = commands.add_parser("alert-review-eval", help="evaluate two reviewer labels per monitor alert")
+    review_eval.add_argument("--monitor", required=True)
+    review_eval.add_argument("--reviews", required=True)
+    review_eval.add_argument("--output", required=True)
     benchmark = commands.add_parser("proposal-bench", help="measure structural proposal checks on synthetic labeled cases")
     benchmark.add_argument("--scorecard", required=True)
     benchmark.add_argument("--suite", required=True)
@@ -77,13 +86,19 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command in ("bi-monitor", "proposal-bench"):
+        if args.command in ("bi-monitor", "proposal-bench", "alert-review-template", "alert-review-eval"):
             if args.command == "bi-monitor":
                 from .monitor import monitor_series
                 result = monitor_series(args.series, as_of=args.as_of, freshness_hours=args.freshness_hours)
-            else:
+            elif args.command == "proposal-bench":
                 from .proposal_benchmark import benchmark_proposals
                 result = benchmark_proposals(args.scorecard, args.suite)
+            elif args.command == "alert-review-template":
+                from .alert_reviews import review_template
+                result = review_template(args.monitor, args.reviewer_a, args.reviewer_b)
+            else:
+                from .alert_reviews import evaluate_reviews
+                result = evaluate_reviews(args.monitor, args.reviews)
             path = Path(args.output)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(canonical_json(result), encoding="utf-8")
