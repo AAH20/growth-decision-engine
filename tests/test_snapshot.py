@@ -8,6 +8,7 @@ from pathlib import Path
 
 from growth_decision_engine.cli import main
 from growth_decision_engine.core import DataError
+from growth_decision_engine.monitor import monitor_snapshots
 from growth_decision_engine.snapshot import snapshot_pilot, verify_snapshot
 
 
@@ -24,6 +25,10 @@ class SnapshotTests(unittest.TestCase):
             created = snapshot_pilot(directory, *FILES, resamples=100)
             self.assertEqual(created["snapshot"]["claim"], "bundled_synthetic_fixture")
             self.assertEqual(verify_snapshot(directory)["status"], "verified_against_local_copy")
+            self.assertEqual(verify_snapshot(directory, expected_inventory_sha256=created["inventory_sha256"])["inventory_sha256"],
+                             created["inventory_sha256"])
+            with self.assertRaisesRegex(DataError, "external expected digest"):
+                verify_snapshot(directory, expected_inventory_sha256="0" * 64)
             self.assertEqual(set(item.name for item in directory.iterdir()),
                              {"assignments.csv", "outcomes.csv", "costs.csv", "billing.csv", "spend.csv",
                               "plan.json", "manifest.json", "packet.json", "snapshot.json"})
@@ -50,6 +55,35 @@ class SnapshotTests(unittest.TestCase):
             packet.write_text(packet.read_text() + " ")
             with self.assertRaisesRegex(DataError, "packet differs from inventory"):
                 verify_snapshot(directory)
+
+    def test_monitor_snapshot_directories_with_external_receipts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            first = snapshot_pilot(folder / "first", *FILES, resamples=100)
+            manifest = folder / "later-manifest.json"
+            data = json.loads(FILES[-1].read_text())
+            data["export_cutoff"] = "2026-01-11T00:00:00Z"
+            manifest.write_text(json.dumps(data))
+            second = snapshot_pilot(folder / "second", *FILES[:-1], manifest, resamples=100)
+            roots = [first["directory"], second["directory"]]
+            receipts = [first["inventory_sha256"], second["inventory_sha256"]]
+            result = monitor_snapshots(roots, as_of="2026-01-13T00:00:00Z",
+                                       expected_inventory_sha256s=receipts)
+            self.assertEqual(result["verified_snapshots"], 2)
+            self.assertEqual(result["alerts"], ["stale_export"])
+            self.assertEqual(result["snapshot_inventory_sha256s"], receipts)
+            output = folder / "monitor.json"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(main(["monitor-snapshots", "--snapshot", roots[0], "--snapshot", roots[1],
+                                       "--expected-inventory-sha256", receipts[0],
+                                       "--expected-inventory-sha256", receipts[1],
+                                       "--as-of", "2026-01-13T00:00:00Z", "--output", str(output)]), 0)
+            self.assertEqual(json.loads(output.read_text()), result)
+            with self.assertRaisesRegex(DataError, "digest count"):
+                monitor_snapshots(roots, as_of="2026-01-13T00:00:00Z",
+                                  expected_inventory_sha256s=receipts[:1])
+            with self.assertRaisesRegex(DataError, "repeats a snapshot"):
+                monitor_snapshots([roots[0], roots[0]], as_of="2026-01-13T00:00:00Z")
 
     def test_rejects_git_destination_and_cleans_partial_on_invalid_source(self):
         with tempfile.TemporaryDirectory() as tmp:

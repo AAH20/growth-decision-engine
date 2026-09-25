@@ -94,17 +94,19 @@ def snapshot_pilot(destination: str | Path, *sources: str | Path, seed: int = 17
         inventory = {"schema_version": SCHEMA, "inputs": copied,
                      "packet_sha256": hashlib.sha256(packet_bytes).hexdigest(),
                      "seed": seed, "resamples": resamples, "claim": packet["claim"]}
-        _private_write(temporary / "snapshot.json", canonical_json(inventory).encode("utf-8"))
+        inventory_bytes = canonical_json(inventory).encode("utf-8")
+        _private_write(temporary / "snapshot.json", inventory_bytes)
         _private_directory(directory)
         os.rename(temporary, directory)
-        return {"directory": str(directory.resolve()), "snapshot": inventory}
+        return {"directory": str(directory.resolve()), "inventory_sha256": hashlib.sha256(inventory_bytes).hexdigest(),
+                "snapshot": inventory}
     except BaseException:
         if temporary.exists():
             shutil.rmtree(temporary)
         raise
 
 
-def verify_snapshot(directory: str | Path) -> dict:
+def verify_snapshot(directory: str | Path, *, expected_inventory_sha256: str | None = None) -> dict:
     root = Path(directory)
     if root.is_symlink() or not root.is_dir():
         raise DataError("snapshot directory must be a real directory")
@@ -114,8 +116,15 @@ def verify_snapshot(directory: str | Path) -> dict:
     inventory_path = root / "snapshot.json"
     if inventory_path.is_symlink() or not inventory_path.is_file() or inventory_path.stat().st_size > 64 * 1024:
         raise DataError("snapshot inventory must be a regular JSON file within limit")
+    inventory_raw = inventory_path.read_bytes()
+    inventory_digest = hashlib.sha256(inventory_raw).hexdigest()
+    if expected_inventory_sha256 is not None:
+        if not isinstance(expected_inventory_sha256, str) or not SHA256.fullmatch(expected_inventory_sha256):
+            raise DataError("expected inventory digest must be lowercase SHA-256")
+        if inventory_digest != expected_inventory_sha256:
+            raise DataError("snapshot inventory does not match external expected digest")
     try:
-        inventory = json.loads(inventory_path.read_bytes(), object_pairs_hook=_unique_keys)
+        inventory = json.loads(inventory_raw, object_pairs_hook=_unique_keys)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DataError("snapshot inventory must be UTF-8 JSON with unique keys") from exc
     if (not isinstance(inventory, dict) or set(inventory) != {"schema_version", "inputs", "packet_sha256", "seed", "resamples", "claim"}
@@ -150,6 +159,7 @@ def verify_snapshot(directory: str | Path) -> dict:
     if packet["claim"] != inventory["claim"]:
         raise DataError("snapshot claim differs from replayed packet")
     return {"status": "verified_against_local_copy", "schema_version": SCHEMA,
-            "packet_sha256": inventory["packet_sha256"], "claim": packet["claim"],
+            "inventory_sha256": inventory_digest, "packet_sha256": inventory["packet_sha256"],
+            "claim": packet["claim"], "seed": seed, "resamples": resamples,
             "limits": ["Local hashes detect changed copies but do not authenticate the original source system.",
-                       "A local directory can be replaced by someone with filesystem access; no external signature or anchor is used."]}
+                       "An external expected inventory hash detects wholesale replacement only if the expected value is stored independently and trusted."]}

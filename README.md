@@ -38,6 +38,8 @@ For a read-only pilot, `pilot` additionally reconciles signed billing transactio
 
 `snapshot-pilot` provides an optional [private local source snapshot](docs/local-source-snapshot.md): it copies the seven inputs once into a new directory outside Git, runs the pilot on those copies, and records file hashes for `verify-snapshot`. It stabilizes replay across multi-pass reconciliation but does not authenticate the original exports or encrypt the bundle.
 
+`monitor-snapshots` accepts those directories directly, avoiding a hand-written seven-path BI series. Each snapshot has an inventory SHA-256 receipt; keep that digest independently and pass it to `verify-snapshot` or `monitor-snapshots` to detect wholesale bundle replacement. A hash is only as trustworthy as the place that holds the expected value.
+
 The [provider export audits](docs/provider-export-audits.md) check customer-projected PostHog or Vercel flag events against the assignment census and summarize allowlisted Cloudflare HTTP Logpush records with sampling explicit. These are local, synthetic-tested contracts; they neither authenticate to providers nor replace randomized assignments. No provider-native export has yet been validated.
 
 External analyst agents can submit a proposal JSON to `python3 -m growth_decision_engine proposal-check --scorecard outputs/demo-scorecard.json --proposal proposal.json`. The validator pins the exact report hash, resolves cited metric paths, and permits only review-oriented next steps. It checks **structural grounding**, not whether the natural-language finding is statistically sound. See [the proposal contract](docs/agent-proposals.md).

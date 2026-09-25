@@ -27,6 +27,12 @@ def main(argv: list[str] | None = None) -> int:
     monitor.add_argument("--as-of", required=True)
     monitor.add_argument("--freshness-hours", type=int, default=24)
     monitor.add_argument("--output", required=True)
+    bundle_monitor = commands.add_parser("monitor-snapshots", help="monitor 1-8 private pilot snapshot directories")
+    bundle_monitor.add_argument("--snapshot", action="append", required=True)
+    bundle_monitor.add_argument("--expected-inventory-sha256", action="append")
+    bundle_monitor.add_argument("--as-of", required=True)
+    bundle_monitor.add_argument("--freshness-hours", type=int, default=24)
+    bundle_monitor.add_argument("--output", required=True)
     review_init = commands.add_parser("alert-review-template", help="create a two-reviewer alert label template")
     review_init.add_argument("--monitor", required=True)
     review_init.add_argument("--reviewer-a", required=True)
@@ -47,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     snapshot.add_argument("--resamples", type=int, default=2000)
     snapshot_verify = commands.add_parser("verify-snapshot", help="verify a private local pilot snapshot")
     snapshot_verify.add_argument("--directory", required=True)
+    snapshot_verify.add_argument("--expected-inventory-sha256")
     benchmark = commands.add_parser("proposal-bench", help="measure structural proposal checks on synthetic labeled cases")
     benchmark.add_argument("--scorecard", required=True)
     benchmark.add_argument("--suite", required=True)
@@ -104,13 +111,17 @@ def main(argv: list[str] | None = None) -> int:
                                           ("assignments", "outcomes", "costs", "billing", "spend", "plan", "manifest")),
                                         seed=args.seed, resamples=args.resamples)
             else:
-                result = verify_snapshot(args.directory)
+                result = verify_snapshot(args.directory, expected_inventory_sha256=args.expected_inventory_sha256)
             print(canonical_json(result), end="")
             return 0
-        if args.command in ("bi-monitor", "proposal-bench", "alert-review-template", "alert-review-eval", "change-preflight"):
+        if args.command in ("bi-monitor", "monitor-snapshots", "proposal-bench", "alert-review-template", "alert-review-eval", "change-preflight"):
             if args.command == "bi-monitor":
                 from .monitor import monitor_series
                 result = monitor_series(args.series, as_of=args.as_of, freshness_hours=args.freshness_hours)
+            elif args.command == "monitor-snapshots":
+                from .monitor import monitor_snapshots
+                result = monitor_snapshots(args.snapshot, as_of=args.as_of, freshness_hours=args.freshness_hours,
+                                           expected_inventory_sha256s=args.expected_inventory_sha256)
             elif args.command == "proposal-bench":
                 from .proposal_benchmark import benchmark_proposals
                 result = benchmark_proposals(args.scorecard, args.suite)

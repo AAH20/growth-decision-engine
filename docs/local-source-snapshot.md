@@ -28,9 +28,25 @@ python3 -m growth_decision_engine snapshot-pilot \
   --directory /private/snapshots/pilot-001
 
 python3 -m growth_decision_engine verify-snapshot \
-  --directory /private/snapshots/pilot-001
+  --directory /private/snapshots/pilot-001 \
+  --expected-inventory-sha256 YOUR_INDEPENDENTLY_SAVED_DIGEST
 ```
 
-The resulting directory contains `assignments.csv`, `outcomes.csv`, `costs.csv`, `billing.csv`, `spend.csv`, `plan.json`, `manifest.json`, `packet.json`, and `snapshot.json`. The inventory records each copied file's name, byte count and SHA-256, plus the packet hash and scoring parameters. The verifier rejects missing, extra, symlinked, oversized, changed, or inconsistent files. Downstream `bi-monitor` and `change-preflight` can point to the files in this directory.
+The resulting directory contains `assignments.csv`, `outcomes.csv`, `costs.csv`, `billing.csv`, `spend.csv`, `plan.json`, `manifest.json`, `packet.json`, and `snapshot.json`. The inventory records each copied file's name, byte count and SHA-256, plus the packet hash and scoring parameters. `snapshot-pilot` prints `inventory_sha256`; keep that value in a separately controlled record. The verifier rejects missing, extra, symlinked, oversized, changed, or inconsistent files. If supplied, `--expected-inventory-sha256` also detects replacement of the inventory and all contents together.
 
-This is a stability and replay aid, **not** a trusted evidence vault. Source modification metadata is only a best-effort concurrent-change check; an adversary controlling the filesystem can replace an entire bundle and its inventory. SHA-256 is not a signature. Filesystem permissions and retention depend on the host and customer policy. The tool does not encrypt files, anchor hashes externally, authenticate collectors, prove export completeness, or resolve whether a real experiment was randomized. Do not copy customer exports to a shared or cloud-synced location without permission.
+For repeated exports from **the same experiment**, create a new bundle for each strictly later export cutoff. Monitor them in order without writing a path-heavy series file:
+
+```bash
+python3 -m growth_decision_engine monitor-snapshots \
+  --snapshot /private/snapshots/pilot-001 \
+  --snapshot /private/snapshots/pilot-002 \
+  --expected-inventory-sha256 DIGEST_FOR_PILOT_001 \
+  --expected-inventory-sha256 DIGEST_FOR_PILOT_002 \
+  --as-of 2026-01-12T00:00:00Z \
+  --freshness-hours 24 \
+  --output /private/reports/bi-monitor.json
+```
+
+The number and order of expected hashes must match the snapshot arguments. `monitor-snapshots` verifies each bundle and then replays the packets for the same freshness, restatement and plan-gate report as `bi-monitor`. Its `series_sha256` hashes the ordered inventory-digest list, making it independent of local directory names. The output includes that list. A mismatch fails before a BI report is written. `change-preflight` can also point to files in these directories.
+
+This is a stability and replay aid, **not** a trusted evidence vault. Source modification metadata is only a best-effort concurrent-change check; an adversary controlling the filesystem can replace an entire bundle and its inventory. An expected digest held separately can reveal that replacement, but SHA-256 is not a signature and the tool does not store or authenticate that external receipt. Filesystem permissions and retention depend on the host and customer policy. The tool does not encrypt files, authenticate collectors, prove export completeness, or resolve whether a real experiment was randomized. Do not copy customer exports to a shared or cloud-synced location without permission.

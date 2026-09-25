@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from .bi import diff_reports
-from .core import DataError
+from .core import DataError, canonical_json
 from .pilot import verify_pilot
 from .plan import PlanError, _unique_keys, timestamp
 
@@ -17,12 +17,6 @@ SNAPSHOT_FIELDS = set(SOURCES) | {"packet", "seed", "resamples"}
 
 def monitor_series(series_path: str | Path, *, as_of: str, freshness_hours: int = 24) -> dict:
     """Verify each packet against local sources before computing history diagnostics."""
-    if isinstance(freshness_hours, bool) or not isinstance(freshness_hours, int) or not 1 <= freshness_hours <= 720:
-        raise DataError("freshness_hours must be an integer from 1 to 720")
-    try:
-        now = timestamp(as_of, "as_of")
-    except PlanError as exc:
-        raise DataError(str(exc)) from exc
     series_file = Path(series_path)
     if series_file.stat().st_size > 64 * 1024:
         raise DataError("monitor series exceeds 64 KiB")
@@ -33,7 +27,51 @@ def monitor_series(series_path: str | Path, *, as_of: str, freshness_hours: int 
         raise DataError("monitor series must be UTF-8 JSON with unique keys") from exc
     if not isinstance(series, dict) or set(series) != {"schema_version", "snapshots"} or series["schema_version"] != "growth-decision-monitor-series/v1":
         raise DataError("unsupported monitor series schema")
-    entries = series["snapshots"]
+    return _monitor_entries(series["snapshots"], base=series_file.parent,
+                            series_digest=hashlib.sha256(raw).hexdigest(),
+                            as_of=as_of, freshness_hours=freshness_hours)
+
+
+def monitor_snapshots(directories: list[str | Path], *, as_of: str, freshness_hours: int = 24,
+                      expected_inventory_sha256s: list[str] | None = None) -> dict:
+    """Monitor verified private bundles without writing a manual seven-path series."""
+    from .snapshot import FILENAMES, NAMES, verify_snapshot
+
+    if not isinstance(directories, list) or not 1 <= len(directories) <= 8:
+        raise DataError("monitor requires 1-8 snapshot directories")
+    if expected_inventory_sha256s is not None and len(expected_inventory_sha256s) != len(directories):
+        raise DataError("expected inventory digest count must match snapshot count")
+    roots = [Path(directory).resolve() for directory in directories]
+    if len(set(roots)) != len(roots):
+        raise DataError("monitor repeats a snapshot directory")
+    entries = []
+    digests = []
+    for index, root in enumerate(roots):
+        expected = expected_inventory_sha256s[index] if expected_inventory_sha256s is not None else None
+        verified = verify_snapshot(root, expected_inventory_sha256=expected)
+        entries.append({"packet": str(root / "packet.json"),
+                        **{name: str(root / FILENAMES[name]) for name in NAMES},
+                        "seed": verified["seed"], "resamples": verified["resamples"]})
+        digests.append(verified["inventory_sha256"])
+    series_digest = hashlib.sha256(canonical_json({"schema_version": "growth-decision-snapshot-series/v1",
+                                                   "inventory_sha256s": digests}).encode("utf-8")).hexdigest()
+    result = _monitor_entries(entries, base=Path("/"), series_digest=series_digest,
+                              as_of=as_of, freshness_hours=freshness_hours)
+    for root, digest in zip(roots, digests):
+        if hashlib.sha256((root / "snapshot.json").read_bytes()).hexdigest() != digest:
+            raise DataError("snapshot inventory changed during monitoring")
+    result["snapshot_inventory_sha256s"] = digests
+    return result
+
+
+def _monitor_entries(entries: object, *, base: Path, series_digest: str,
+                     as_of: str, freshness_hours: int) -> dict:
+    if isinstance(freshness_hours, bool) or not isinstance(freshness_hours, int) or not 1 <= freshness_hours <= 720:
+        raise DataError("freshness_hours must be an integer from 1 to 720")
+    try:
+        now = timestamp(as_of, "as_of")
+    except PlanError as exc:
+        raise DataError(str(exc)) from exc
     if not isinstance(entries, list) or not 1 <= len(entries) <= 8:
         raise DataError("monitor series requires 1-8 snapshots")
     packets = []
@@ -47,11 +85,11 @@ def monitor_series(series_path: str | Path, *, as_of: str, freshness_hours: int 
         seed, resamples = entry["seed"], entry["resamples"]
         if isinstance(seed, bool) or not isinstance(seed, int) or isinstance(resamples, bool) or not isinstance(resamples, int) or not 100 <= resamples <= 10000:
             raise DataError(f"snapshot {index}: invalid seed or resamples")
-        packet_path = (series_file.parent / entry["packet"]).resolve()
+        packet_path = (base / entry["packet"]).resolve()
         if packet_path in seen:
             raise DataError("monitor series repeats a packet path")
         seen.add(packet_path)
-        source_paths = [(series_file.parent / entry[name]).resolve() for name in SOURCES]
+        source_paths = [(base / entry[name]).resolve() for name in SOURCES]
         packet = verify_pilot(packet_path, *source_paths, seed=seed, resamples=resamples)
         try:
             cutoff = timestamp(packet["manifest"]["export_cutoff"], "export_cutoff")
@@ -86,7 +124,7 @@ def monitor_series(series_path: str | Path, *, as_of: str, freshness_hours: int 
         "protocol": "growth-decision-bi-monitor/v1",
         "claim": "bundled_synthetic_fixture" if all(p["claim"] == "bundled_synthetic_fixture" for p in packets) else "operator_supplied_unverified",
         "experiment_id": packets[0]["experiment_id"],
-        "series_sha256": hashlib.sha256(raw).hexdigest(),
+        "series_sha256": series_digest,
         "verified_snapshots": len(packets),
         "export_cutoffs": [p["manifest"]["export_cutoff"] for p in packets],
         "as_of": as_of,

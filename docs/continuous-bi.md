@@ -58,6 +58,8 @@ python3 -m growth_decision_engine bi-monitor \
 
 `as_of` is mandatory so replay yields identical output. The monitor accepts 1–8 snapshots, each with a verified pilot packet and strictly increasing UTC export cutoff. It rejects tampered packets, changed experiment IDs, malformed series, duplicate packet paths, and a cutoff later than `as_of`. It checks the **latest adjacent pair** for removed or restated date/arm rows and a changed plan hash; it also reports failed sample, sample-ratio, and cost gates on the latest scorecard. It uses `age_hours > freshness_hours` to flag staleness. Added rows and source-file changes appear in `latest_diff` but do not alone trigger an alert. Every alert needs human interpretation. The `workload.bootstrap_unit_draws` field is a deterministic work count, **not** measured runtime, query cost, or USD.
 
+Operators using [private local source snapshots](local-source-snapshot.md) can run `monitor-snapshots` over bundle directories instead of maintaining the series JSON. Optional independent inventory receipts bind each bundle before monitoring. Both commands produce the same versioned monitor protocol and remain offline, review-only tools.
+
 ## Independent alert review
 
 After a monitor report is frozen, create a review file for two named **pseudonymous** reviewers. The command generates one entry per reviewer per alert and binds it to the SHA-256 of the exact monitor report bytes. Each reviewer independently replaces their `"unreviewed"` value with `"actionable"`, `"false_alarm"`, or `"uncertain"`. Keep the file local; do not include names, customer details, free-text notes, or source records.
