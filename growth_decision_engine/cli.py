@@ -19,6 +19,23 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="run the explicitly synthetic example")
     demo.add_argument("--output", default="outputs/demo-scorecard.json")
+    ax = commands.add_parser("ax-task", help="export a Google/AX Task manifest for the synthetic demo")
+    ax.add_argument("--image", required=True, help="operator-built OCI image pinned to sha256 digest")
+    ax.add_argument("--workspace", required=True, help="operator-provisioned AX workspace name")
+    ax.add_argument("--name", default="growth-decision-demo")
+    ax.add_argument("--output", required=True)
+    shadow = commands.add_parser("decision-shadow", help="advisory typed review suggestion from fixture, local Laya, or Jev")
+    shadow.add_argument("--scorecard", required=True)
+    shadow.add_argument("--provider", choices=("fixture", "laya", "jev"), required=True)
+    shadow.add_argument("--allow-network", action="store_true")
+    shadow.add_argument("--output", required=True)
+    cognee = commands.add_parser("cognee-context", help="untrusted, cited Cognee chunks for reviewer context")
+    cognee.add_argument("--scorecard", required=True)
+    cognee.add_argument("--query", required=True)
+    cognee.add_argument("--response-file")
+    cognee.add_argument("--base-url")
+    cognee.add_argument("--allow-network", action="store_true")
+    cognee.add_argument("--output", required=True)
     diff = commands.add_parser("bi-diff", help="identify additions, removals and restatements between scorecards")
     diff.add_argument("before")
     diff.add_argument("after")
@@ -108,6 +125,20 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command in ("ax-task", "decision-shadow", "cognee-context"):
+            from .integrations import ax_task_manifest, cognee_context, decision_shadow
+            if args.command == "ax-task":
+                result = ax_task_manifest(image=args.image, workspace=args.workspace, name=args.name)
+            elif args.command == "decision-shadow":
+                result = decision_shadow(args.scorecard, args.provider, allow_network=args.allow_network)
+            else:
+                result = cognee_context(args.scorecard, args.query, response_file=args.response_file,
+                                        base_url=args.base_url, allow_network=args.allow_network)
+            path = Path(args.output)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(canonical_json(result), encoding="utf-8")
+            print(path)
+            return 0
         if args.command == "render-report":
             from .report import write_snapshot_report
             output = write_snapshot_report(args.snapshot, args.output,

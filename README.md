@@ -2,7 +2,7 @@
 
 **Inspectable marketing analytics for the business value of product and campaign experiments.** The current release takes customer-controlled CSV exports of assignment, accepted outcomes, unit costs, and transaction-level billing and spend. It reconciles every randomized unit and ledger amount, calculates contribution profit, estimates treatment-minus-control effects, applies a declared experiment plan, and emits deterministic scorecards and pilot packets that can be verified offline. The bundled data is entirely synthetic.
 
-This is a local measurement kernel with a read-only evidence contract for external analyst agents. It is **not** a deployed marketing platform, a live PostHog/Cloudflare/Vercel connector, an LLM-powered agent, an autonomous campaign agent, or proof that a real experiment increased profit.
+This is a local measurement kernel with a read-only evidence contract for external analyst agents. Optional Google/AX, Laya/Jev and Cognee adapters produce synthetic execution manifests or advisory review sidecars. It is **not** a deployed marketing platform, a live PostHog/Cloudflare/Vercel connector, an autonomous campaign agent, or proof that a real experiment increased profit.
 
 ## Try it in one command
 
@@ -49,6 +49,8 @@ External analyst agents can submit a proposal JSON to `python3 -m growth_decisio
 For repeatable **local continuous BI**, `bi-monitor` replays a bounded sequence of pilot packets against each packet's declared exports before reporting freshness, latest daily-BI restatements, plan changes, and failed plan gates. `alert-review-template` and `alert-review-eval` bind two pseudonymous reviewer labels to the exact monitor report, leaving disagreements unresolved. `proposal-bench` checks the proposal validator against five labeled synthetic cases; one deliberately false sentence passes because a real citation exists. These are review tools, not a live monitor or semantic fact checker. See [continuous BI and proposal evaluation](docs/continuous-bi.md).
 
 `change-preflight` produces a **non-authorizing** review packet for a bounded feature-flag increase after replaying two pilot packets. It checks exact evidence replay, positive plan signals, a declared spend cap, expiry and rollback target, but never authenticates an operator or writes to a platform. The current synthetic fixture is inconclusive and is blocked. See [the offline change preflight contract](docs/change-preflight.md).
+
+The [Google/AX, Laya/Jev and Cognee integration guide](docs/agent-runtime-and-context-integrations.md) describes a pinned AX Task manifest for the synthetic demo, optional typed shadow review suggestions, and untrusted Cognee context sidecars. The default fixture paths run without network access or model weights. No live provider or AX cluster is validated here; provider outputs cannot change the scorecard or authorize campaign operations.
 
 ## Data contract
 
@@ -161,7 +163,7 @@ flowchart TB
 
 The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would use Cloudflare request context in a customer-approved workflow; a causal join would require a separately validated, privacy-preserving unit linkage and complete assignment census. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
 
-For the detailed [read-only pilot](docs/read-only-pilot.md), [private local snapshots](docs/local-source-snapshot.md), [offline pilot review report](docs/pilot-review-report.md), [provider export audits](docs/provider-export-audits.md), [continuous BI and alert review](docs/continuous-bi.md), [offline change preflight](docs/change-preflight.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
+For the detailed [read-only pilot](docs/read-only-pilot.md), [private local snapshots](docs/local-source-snapshot.md), [offline pilot review report](docs/pilot-review-report.md), [provider export audits](docs/provider-export-audits.md), [continuous BI and alert review](docs/continuous-bi.md), [offline change preflight](docs/change-preflight.md), [agent runtime and context integrations](docs/agent-runtime-and-context-integrations.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
 
 ## Relationship to existing A2Z projects
 

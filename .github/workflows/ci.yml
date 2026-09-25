@@ -18,6 +18,15 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m growth_decision_engine demo --output outputs/demo-scorecard.json
       - run: >-
+          python -m growth_decision_engine decision-shadow
+          --scorecard outputs/demo-scorecard.json --provider fixture
+          --output outputs/shadow-fixture.json
+      - run: >-
+          python -m growth_decision_engine cognee-context
+          --scorecard outputs/demo-scorecard.json --query "refund reconciliation"
+          --response-file growth_decision_engine/fixtures/cognee-chunks.synthetic.json
+          --output outputs/cognee-context.json
+      - run: >-
           python -m growth_decision_engine proposal-bench
           --scorecard outputs/demo-scorecard.json
           --suite growth_decision_engine/fixtures/proposal-bench.synthetic.json
