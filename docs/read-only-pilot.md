@@ -64,6 +64,8 @@ python3 -m growth_decision_engine verify-pilot \
 
 `verify-pilot` recomputes the packet from the original inputs. A changed ledger, manifest, plan or scorecard invalidates replay. The packet contains hashes of all input exports, exact row-count and financial-control reconciliation, per-unit ledger totals, the scored economics, and `human_review_status: pending`. It cannot set approval or make a platform write. Do not commit pilot inputs or packets containing customer data; the `outputs/` directory is ignored by Git, but use the customer's approved storage and retention rules.
 
+For multi-pass reconciliation, [`snapshot-pilot`](local-source-snapshot.md) can first copy the seven inputs to a private directory outside Git and run the pilot against those copies. `verify-snapshot` then checks the copied files, inventory and packet together. This narrows accidental source-change risk during replay; the copy is not independently authenticated evidence.
+
 ```mermaid
 flowchart LR
     A[Assigned units] --> S[Existing scorecard]

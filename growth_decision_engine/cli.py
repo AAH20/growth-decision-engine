@@ -39,6 +39,14 @@ def main(argv: list[str] | None = None) -> int:
     change = commands.add_parser("change-preflight", help="offline, non-authorizing feature-flag change review packet")
     change.add_argument("--request", required=True)
     change.add_argument("--output", required=True)
+    snapshot = commands.add_parser("snapshot-pilot", help="freeze local pilot inputs in a private directory")
+    for field in ("assignments", "outcomes", "costs", "billing", "spend", "plan", "manifest"):
+        snapshot.add_argument(f"--{field}", required=True)
+    snapshot.add_argument("--directory", required=True)
+    snapshot.add_argument("--seed", type=int, default=1729)
+    snapshot.add_argument("--resamples", type=int, default=2000)
+    snapshot_verify = commands.add_parser("verify-snapshot", help="verify a private local pilot snapshot")
+    snapshot_verify.add_argument("--directory", required=True)
     benchmark = commands.add_parser("proposal-bench", help="measure structural proposal checks on synthetic labeled cases")
     benchmark.add_argument("--scorecard", required=True)
     benchmark.add_argument("--suite", required=True)
@@ -89,6 +97,16 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command in ("snapshot-pilot", "verify-snapshot"):
+            from .snapshot import snapshot_pilot, verify_snapshot
+            if args.command == "snapshot-pilot":
+                result = snapshot_pilot(args.directory, *(getattr(args, name) for name in
+                                          ("assignments", "outcomes", "costs", "billing", "spend", "plan", "manifest")),
+                                        seed=args.seed, resamples=args.resamples)
+            else:
+                result = verify_snapshot(args.directory)
+            print(canonical_json(result), end="")
+            return 0
         if args.command in ("bi-monitor", "proposal-bench", "alert-review-template", "alert-review-eval", "change-preflight"):
             if args.command == "bi-monitor":
                 from .monitor import monitor_series
