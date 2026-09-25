@@ -42,6 +42,8 @@ External analyst agents can submit a proposal JSON to `python3 -m growth_decisio
 
 For repeatable **local continuous BI**, `bi-monitor` replays a bounded sequence of pilot packets against each packet's declared exports before reporting freshness, latest daily-BI restatements, plan changes, and failed plan gates. `alert-review-template` and `alert-review-eval` bind two pseudonymous reviewer labels to the exact monitor report, leaving disagreements unresolved. `proposal-bench` checks the proposal validator against five labeled synthetic cases; one deliberately false sentence passes because a real citation exists. These are review tools, not a live monitor or semantic fact checker. See [continuous BI and proposal evaluation](docs/continuous-bi.md).
 
+`change-preflight` produces a **non-authorizing** review packet for a bounded feature-flag increase after replaying two pilot packets. It checks exact evidence replay, positive plan signals, a declared spend cap, expiry and rollback target, but never authenticates an operator or writes to a platform. The current synthetic fixture is inconclusive and is blocked. See [the offline change preflight contract](docs/change-preflight.md).
+
 ## Data contract
 
 The three CSVs use one row per randomized unit and **exactly** these columns:
@@ -149,11 +151,11 @@ flowchart TB
 | 1 — offline tooling shipped; real pilot pending | Read-only signup-to-paid pilot packet with transaction-level billing and cost reconciliation | Customer permission and locked plan outside CLI, customer exports, independent source-completeness check, human review |
 | 2 — local audits shipped; native validation pending | PostHog/Vercel flag-evaluation projections and Cloudflare Logpush context audits | Contract tests against permitted native exports, provider source counts, event-loss and join-error measurements |
 | 3 — local monitor and review contract shipped; field validation pending | Replay-verified pilot history, freshness and restatement alerts, two-reviewer adjudication, structural proposal suite | Real export cadence, measured runtime/query cost, actual reviewer labels, proposal semantic-support tests and acceptance |
-| 4 | Approved operational integration | Independent lift replication, spend limits, rollback, operator override audit |
+| 4 — offline preflight shipped; operational integration pending | Two-packet replay and bounded change review packet | Independently reviewed lift replication, authenticated approval, enforced live spend limits, tested rollback, operator override audit |
 
 The first partner-facing feature would be **contribution profit per accepted conversion for a feature-flag experiment**. A second would use Cloudflare request context in a customer-approved workflow; a causal join would require a separately validated, privacy-preserving unit linkage and complete assignment census. Neither platform partnership is assumed. The durable commercial offering would be managed operations, enterprise isolation, customer-specific economics, and carefully consented cross-customer benchmarks—not exclusive ownership of a platform's basic telemetry.
 
-For the detailed [read-only pilot](docs/read-only-pilot.md), [provider export audits](docs/provider-export-audits.md), [continuous BI and alert review](docs/continuous-bi.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
+For the detailed [read-only pilot](docs/read-only-pilot.md), [provider export audits](docs/provider-export-audits.md), [continuous BI and alert review](docs/continuous-bi.md), [offline change preflight](docs/change-preflight.md), [production architecture](docs/production-architecture.md), [evaluation protocol](docs/evaluation-protocol.md), [keyword and search strategy](docs/keyword-strategy.md), and [inspectable/commercial boundary](docs/commercial-boundary.md), see `docs/`. The phrase *marketing analytics* leads the title because a recent relative Google Trends comparison in the A2Z ecosystem found stronger interest than narrower phrases; this is **not** a claim of absolute monthly search volume.
 
 ## Relationship to existing A2Z projects
 
