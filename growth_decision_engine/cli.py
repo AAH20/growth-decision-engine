@@ -54,6 +54,10 @@ def main(argv: list[str] | None = None) -> int:
     snapshot_verify = commands.add_parser("verify-snapshot", help="verify a private local pilot snapshot")
     snapshot_verify.add_argument("--directory", required=True)
     snapshot_verify.add_argument("--expected-inventory-sha256")
+    report = commands.add_parser("render-report", help="render a private offline HTML review from a verified snapshot")
+    report.add_argument("--snapshot", required=True)
+    report.add_argument("--expected-inventory-sha256")
+    report.add_argument("--output", required=True)
     benchmark = commands.add_parser("proposal-bench", help="measure structural proposal checks on synthetic labeled cases")
     benchmark.add_argument("--scorecard", required=True)
     benchmark.add_argument("--suite", required=True)
@@ -104,6 +108,12 @@ def main(argv: list[str] | None = None) -> int:
             cmd.add_argument("--scorecard", required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "render-report":
+            from .report import write_snapshot_report
+            output = write_snapshot_report(args.snapshot, args.output,
+                                           expected_inventory_sha256=args.expected_inventory_sha256)
+            print(output)
+            return 0
         if args.command in ("snapshot-pilot", "verify-snapshot"):
             from .snapshot import snapshot_pilot, verify_snapshot
             if args.command == "snapshot-pilot":
